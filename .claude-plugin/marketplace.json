@@ -1,0 +1,15 @@
+{
+  "name": "viis",
+  "description": "Claude Code plugins for VIIS / VietPlants farm data.",
+  "owner": {
+    "name": "VIIS",
+    "url": "https://github.com/VIIS-IOT"
+  },
+  "plugins": [
+    {
+      "name": "viis",
+      "source": "./plugins/viis",
+      "description": "VIIS MCP server connection plus the viis-mcp skill: read and manage farm tasks, plans, allocations, env lots, QC, stock and devices with preview-then-confirm writes."
+    }
+  ]
+}

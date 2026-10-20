@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "viis": {
+      "type": "http",
+      "url": "https://iot.viis.tech/api/v2/mcp"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+name: Release skill
+
+# Push a tag like v1.0.0 to publish viis-mcp.zip (for Claude Desktop / claude.ai upload) as a release asset.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check frontmatter
+        run: |
+          f=plugins/viis/skills/viis-mcp/SKILL.md
+          head -1 "$f" | grep -qx -- '---' || { echo "SKILL.md must start with frontmatter"; exit 1; }
+          grep -q '^name: viis-mcp$' "$f" || { echo "name must be viis-mcp"; exit 1; }
+          desc=$(sed -n 's/^description: //p' "$f")
+          [ -n "$desc" ] && [ ${#desc} -le 1024 ] || { echo "description missing or over 1024 chars"; exit 1; }
+
+      - name: Check plugin version matches tag
+        run: |
+          v=$(jq -r .version plugins/viis/.claude-plugin/plugin.json)
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "plugin.json version $v does not match tag $GITHUB_REF_NAME"; exit 1; }
+
+      - name: Package viis-mcp.zip
+        run: |
+          mkdir -p dist
+          (cd plugins/viis/skills && zip -r ../../../dist/viis-mcp.zip viis-mcp -x '*.DS_Store')
+          unzip -l dist/viis-mcp.zip
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/viis-mcp.zip --title "$GITHUB_REF_NAME" --generate-notes

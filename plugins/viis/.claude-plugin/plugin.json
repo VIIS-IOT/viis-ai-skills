@@ -1,0 +1,19 @@
+{
+  "name": "viis",
+  "version": "1.0.0",
+  "description": "VIIS MCP server connection plus the viis-mcp skill for VIIS / VietPlants farm data.",
+  "author": {
+    "name": "VIIS",
+    "url": "https://github.com/VIIS-IOT"
+  },
+  "homepage": "https://github.com/VIIS-IOT/viis-ai-skills",
+  "repository": "https://github.com/VIIS-IOT/viis-ai-skills",
+  "license": "LicenseRef-VIIS-Proprietary",
+  "keywords": [
+    "viis",
+    "vietplants",
+    "mcp",
+    "agriculture",
+    "farm"
+  ]
+}
