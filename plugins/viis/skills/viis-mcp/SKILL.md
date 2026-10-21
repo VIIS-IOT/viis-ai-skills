@@ -32,7 +32,7 @@ Every write tool takes `confirm` (boolean, default `false`).
 
 Follow this sequence for every write:
 
-1. Gather the arguments. Look up ids with read tools; never guess an id or an enum value.
+1. Gather the arguments. Look up ids with read tools (`viis.department.list`, `viis.task.template.list`, `viis.environment.template.list`, `viis.crop.state.list`, `viis.employee.list`); never guess an id or an enum value.
 2. Call the tool **without** `confirm` and read the preview. If it reports an error (missing field, wrong status, user not in your customer, shortage), fix the arguments or explain the error to the user. Do not retry with `confirm: true` hoping it passes.
 3. Show the user what will change in plain words, e.g. "Tạo 1 công việc 'Lô Stock M06 - 80 lít' ngày 22/10 cho Nguyễn Văn A, năng suất 80 Lít". Ask for a clear yes.
 4. Only after that yes, call again with the same arguments and `confirm: true`. Report the result, including the new record's id or label.
@@ -43,7 +43,7 @@ For a batch (several tasks, a plan's details), preview the whole batch, confirm 
 
 ### Rules that keep data correct
 
-- **Statuses are exact strings.** Tasks: `Plan`, `Pending`, `In progress`, `Done`, `InUse`, `Waiting`, `Stopped`. `Verified` can't be set by a tool; only task validation sets it. A Verified task can't change status, and Done or Verified tasks can't be deleted. Status filters on `viis.task.list` are exact matches too: the tool description mentions "In Progress / Completed", but those values don't exist. Plans take `plan`, `assigned`, `completed`; allocations take `planned`, `in_progress`, `completed`, `cancelled`; crops take `In progress`, `Done`.
+- **Statuses are exact strings.** Tasks: `Plan`, `Pending`, `In progress`, `Done`, `InUse`, `Waiting`, `Stopped`. `Verified` can't be set by a tool; only task validation sets it. A Verified task can't change status, and Done or Verified tasks can't be deleted. Status filters on `viis.task.list` are exact matches too (older servers' description suggests "In Progress / Completed"; those values don't exist). Plans take `plan`, `assigned`, `completed`; allocations take `planned`, `in_progress`, `completed`, `cancelled`; crops take `In progress`, `Done`.
 - **Dates carry the Vietnam offset.** For task and env-task times, send ISO with an offset: `2026-10-22T07:00:00+07:00`. A bare `2026-10-22` is read as midnight UTC, which is 07:00 in Vietnam and can land on the wrong day. Plans, crops and scores take `YYYY-MM-DD`; QC takes `YYYY-MM-DD HH:mm:ss`; stock posting date and time are UTC.
 - **Assignees must belong to the user's customer.** Use ids from `viis.employee.list`. The preview rejects anyone else.
 - **Use `viis.task.update.status` to change a status.** Don't use a generic update for this. It runs the same checks as the web status menu: steam-pot stock lot checks, and the Done stamp for env tasks.

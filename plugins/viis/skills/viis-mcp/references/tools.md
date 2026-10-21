@@ -6,6 +6,7 @@ Names are given with dots. A client may show `viis.plan.detail.batch-save` as `v
 
 ## Contents
 - Overview and summaries
+- Lookups (ids for write tools)
 - Tasks (công việc)
 - Env tasks: Lô Stock → Hấp → Chiết rót
 - Production plans and allocation
@@ -29,11 +30,21 @@ Names are given with dots. A client may show `viis.plan.detail.batch-save` as `v
 | `viis.alarm.summary`, `viis.device.summary`, `viis.schedule.summary`, `viis.notification.summary` | Quick health views. `notification.summary` takes `days` (max 365). |
 | `viis.employee.list` | Staff of the customer. `name` is the customer user id used as `assigned_to`. |
 
+## Lookups (ids for write tools) (R)
+Use these to find ids; never guess them. On older servers they may be missing: if a tool doesn't exist, take the ids from `viis.task.get` on a similar task, or ask the user.
+
+| Tool | Returns | Used as |
+|---|---|---|
+| `viis.department.list` (`search`) | Departments (Phòng môi trường, Phòng cấy chuyền…) | `department_id` |
+| `viis.task.template.list` (`task_type`, `environment_template_id`, `search`) | Task templates, e.g. "Lô Stock M06 - 80 lít" | `template_id` |
+| `viis.environment.template.list` (`search`) | Environments M06, D1… | `environment_template_id` |
+| `viis.crop.state.list` (`crop_id`) | Stages of a crop: `name` + `state_template_id` | `state_id` / `farming_plan_state`, `state_template_id` |
+
 ## Tasks (công việc)
 | Tool | R/W | Notes |
 |---|---|---|
-| `viis.task.list` | R | Filters: `status` (exact: `Plan`, `In progress`, `Done`, …), `assigned_to`, `limit`. |
-| `viis.task.get` | R | Full task, including `farming_plan_state`, items, outputs and links. |
+| `viis.task.list` | R | Filters: `status` (exact: `Plan`, `In progress`, `Done`, …), `assigned_to`, `task_type`, `date_from` / `date_to` (Vietnam days `YYYY-MM-DD`; tasks whose start–end overlaps them, e.g. today), `limit`. `status_counts` covers everything that matches, `tasks` is capped by `limit`. |
+| `viis.task.get` | R | One task with `farming_plan_state`, `crop_id`, `template_id`, `department_id`, `environment_template_id` (+ labels), `outputs` and `materials` with `exp_in_uom` / `draft_in_uom` in the active unit. |
 | `viis.task.create` | W | Simple task in `Plan`. For env tasks use `viis.env.task.create`. |
 | `viis.task.update` | W | Edit fields. |
 | `viis.task.update.status` | W | The only right way to change a status. It runs the web status-menu logic. `Verified` can't be set. |
@@ -60,7 +71,7 @@ The chain rules are enforced by the server and shown in the preview:
 ## Production plans and allocation (kế hoạch sản xuất, phân bổ)
 | Tool | R/W | Notes |
 |---|---|---|
-| `viis.plan.list`, `viis.plan.get` | R | `plan.get` returns `yield_outputs[]` with their live allocations. |
+| `viis.plan.list`, `viis.plan.get` | R | `plan.get` returns `yield_outputs[]` with live allocations, capped by `allocation_limit` (default 20; `allocation_count` is the real number). Narrow large plans with `yield_output_id` or `environment_code`. |
 | `viis.plan.create` | W | `plant_id` and `label`; dates `YYYY-MM-DD`. It always creates a new plan; use `viis.plan.update` to change one. |
 | `viis.plan.update`, `viis.plan.status` | W | Status: `plan`, `assigned`, `completed`. |
 | `viis.plan.delete` | W D ⚠ | |
@@ -119,9 +130,13 @@ Each has `create` / `update` / `delete` (D): `viis.item`, `viis.uom`, `viis.plan
 ## Workflows
 
 **"Giao việc pha Lô Stock M06 80 lít cho X ngày 22/10"**
-1. `viis.employee.list` → X's id; `viis.crop.overview` → the crop (the environment batch); `viis.task.get` on a similar task, or ask, → `farming_plan_state`, `template_id`, `department_id`.
-2. `viis.task.assign` without confirm, with one row: X, `2026-10-22T07:00:00+07:00` → `2026-10-22T17:00:00+07:00`, `exp_quantity` in the template's unit, `task_type: EnvStock`.
-3. Show the preview, get a yes, then repeat with `confirm: true`. X gets "Bạn vừa được giao công việc …" on the app.
+1. `viis.employee.list` → X's id. `viis.crop.overview` → the crop (the environment batch). `viis.crop.state.list` → the stage ("Giai đoạn Pha Lô Stock") id. `viis.department.list` → the department. `viis.task.template.list` (`task_type: EnvStock`, `search: M06`) → the template.
+2. Optionally `viis.plan.list` → the production plan covering that day (`production_plan_id`).
+3. `viis.task.assign` without confirm: `crop_id` + `state_id`, `department_id`, one row with X, `2026-10-22T07:00:00+07:00` → `2026-10-22T17:00:00+07:00`, `template_id`, `exp_quantity` in the template's unit (Lít), `task_type: EnvStock`.
+4. Show the preview, get a yes, then repeat with `confirm: true`. X gets "Bạn vừa được giao công việc …" on the app. Env stock tasks don't count against the plan's yield allocation.
+
+**"Hôm nay ai có việc gì?"**
+`viis.task.list` with `date_from` = today (Vietnam date) and `limit: 100`. Group by `assigned_name`. If `tasks` hits the limit, say so and use `status_counts` for totals.
 
 **"Kế hoạch tháng 11 còn bao nhiêu chưa phân bổ?"**
 `viis.plan.list` → `viis.plan.get` → for each yield output, compare `yield_value` with the sum of its allocations. Report by output and unit.
