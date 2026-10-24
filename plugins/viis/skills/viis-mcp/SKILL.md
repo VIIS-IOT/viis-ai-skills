@@ -19,7 +19,7 @@ The server names tools with dots (`viis.task.update.status`). Some clients show 
 ## Reading data
 
 1. Start broad, then narrow. The `*.summary` and `*.overview` tools (`viis.task.summary`, `viis.stock.summary`, `viis.crop.overview`, `viis.alarm.summary`) answer most "how are things" questions in one call.
-2. List tools take `limit` (default 20, max 100; `viis.plan.list` max 50). There is no offset. If a list hits the limit, say that the result may be cut off and filter it down (status, assignee, days) instead of claiming a total.
+2. Older list tools take `limit` (default 20, max 100; `viis.plan.list` max 50) and have no offset. The newer `*.list` tools (QC, labels, vouchers, catalogs, reports) take `page` + `limit` (default 50, max 200) and return `total`. If a list hits the limit, say that the result may be cut off and filter it down (status, assignee, days) instead of claiming a total.
 3. Use `*.get` for one record once you have its id. Ids are UUIDs, from a list result or from the user.
 4. Answer in the user's language (usually Vietnamese), with names and labels the user knows (task label, employee name, lot name), not raw UUIDs. Show quantities with their unit. Env lots are stored in base units (ml or g) with a conversion factor, so convert 300000 ml to "300 Lít" when the item's active unit is Lít.
 
@@ -32,7 +32,7 @@ Every write tool takes `confirm` (boolean, default `false`).
 
 Follow this sequence for every write:
 
-1. Gather the arguments. Look up ids with read tools (`viis.department.list`, `viis.task.template.list`, `viis.environment.template.list`, `viis.crop.state.list`, `viis.employee.list`); never guess an id or an enum value.
+1. Gather the arguments. Look up ids with read tools (`viis.department.list`, `viis.task.template.list`, `viis.environment.template.list`, `viis.crop.state.list`, `viis.employee.list`, `viis.item.list`, `viis.qc.wip.list`, `viis.label.list`, `viis.stock.*.list`; see the Lookups table); never guess an id or an enum value.
 2. Call the tool **without** `confirm` and read the preview. If it reports an error (missing field, wrong status, user not in your customer, shortage), fix the arguments or explain the error to the user. Do not retry with `confirm: true` hoping it passes.
 3. Show the user what will change in plain words, e.g. "Tạo 1 công việc 'Lô Stock M06 - 80 lít' ngày 22/10 cho Nguyễn Văn A, năng suất 80 Lít". Ask for a clear yes.
 4. Only after that yes, call again with the same arguments and `confirm: true`. Report the result, including the new record's id or label.
@@ -53,9 +53,10 @@ For a batch (several tasks, a plan's details), preview the whole batch, confirm 
 
 For these, show the preview and get an explicit yes for that exact action, even if the user already said "do it":
 
+- `viis.schedule.*` writes and `viis.alarm.rule.*` writes: they reach the real gateway or the ThingsBoard device profile immediately. Never create a "test" schedule or rule on a real device.
 - `viis.device.command.send`: sends a ThingsBoard RPC straight to a real device (pump, valve, light). It is fire-and-forget: no acknowledgement, and `method` and `params` aren't validated. Never send one the user didn't ask for by device and action. Never "test" a device command. After sending, say that you cannot confirm the device acted; the user should check telemetry (`viis.device.telemetry.latest`) or the device itself.
 - Deletes (`*.delete`, `viis.plan.detail.delete-range`, allocation or assignment deletes). They are marked destructive.
-- Approvals and postings: `viis.qc.*.approve*`, `viis.qc.*.stock-entry`, `viis.qc.subculture.confirm*` / `revoke`, `viis.stock.*.submit` / `cancel`. These post or reverse stock entries but are **not** marked destructive by the server.
+- Approvals and postings: `viis.qc.*.approve*`, `viis.qc.*.stock-entry`, `viis.qc.subculture.confirm*` / `revoke`, `viis.stock.*.submit` / `cancel` (including delivery notes, xuất kho). These post or reverse stock entries but are **not** marked destructive by the server.
 - `viis.employee.create`: creates a login account.
 - `viis.label.print` / `bulk-print`: they mark labels printed and can trigger physical printing.
 
@@ -66,6 +67,7 @@ For these, show the preview and get an explicit yes for that exact action, even 
 | 401 / "authorization required" | The token expired or the web session is gone. An access token lasts 1 h and is refreshed automatically; the connection lasts 30 days idle, 90 days at most. | Ask the user to reconnect (re-authenticate) the VIIS connector. |
 | Permission / section error | The user's role lacks that section in the web app. | Explain which permission is missing. Don't retry with other tools to get around it. |
 | "needs a customer" on a write | Tenant-wide System users without a customer can read but not write tasks or catalogs. | Ask the user to use a customer account. |
+| "Only a System User (customer admin) can do this" | Task templates and job titles are admin-only on the web too. | Ask a customer admin to do it. |
 | Write refused on a read-only connection | The connection was granted only `mcp:read`. | Tell the user. Writes need a connection authorized with write access. |
 | Rate limit | 60 calls/min and 1000/day per connection. | Slow down and batch reads with summary tools. |
 | Tool missing that should exist | The server's tool list changed. Clients cache it, and the server sends no change notice. | Ask the user to reconnect the connector. |
