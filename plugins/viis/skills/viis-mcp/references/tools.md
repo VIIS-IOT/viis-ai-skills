@@ -75,6 +75,7 @@ Task types: `EnvStock` (Lô Stock, lô môi trường), `EnvSteamPot` (Hấp, st
 | `viis.env.task.create` | W | Requires `farming_plan_state` and `task_type`. Materials go in `item_list` and outputs in `prod_quantity_list`, quantities in the active UOM with `active_conversion_factor` (Lít = 1000 × ml). |
 | `viis.env.task.update` | W | Same shape. `task_transfers` links sources; `replace_task_transfers: true` replaces the whole set. |
 | `viis.env.task.delete` | W D | |
+| `viis.initial-sampling.create` / `.update` (`id`) / `.delete` (`name`, D) | W | Initial sampling tasks (lấy mẫu ban đầu). Same task shape as `viis.env.task.*`; the sample check itself is `viis.qc.sample.*`. |
 | `viis.qc.env-pour.approve` | W ⚠ | Approves a pour (→ Verified). It posts stock and is not reversible from MCP. |
 
 The chain rules are enforced by the server and shown in the preview:
@@ -101,7 +102,7 @@ The chain rules are enforced by the server and shown in the preview:
 
 ## Crops and stages (lô sản xuất, giai đoạn)
 `viis.crop.create` / `update` / `delete` (D); `viis.crop.stage.upsert` / `update` / `delete` (D). Crop status: `In progress` or `Done`.
-Pest / disease reports (sâu bệnh): `viis.crop.pest.list` (`crop_id`, R), `.create` (`crop_id`, `label`, optional `state_ids`, `user_ids`), `.update` (lists replace the links), `.delete` (D).
+Pest / disease reports (sâu bệnh): `viis.crop.pest.list` (`crop_id`, R), `.create` (`crop_id`, `label`, optional `state_ids`, `user_ids`), `.update` (`state_ids` / `user_ids`, when sent, replace the links), `.delete` (D).
 
 ## QC
 | Tool | Notes |
@@ -166,7 +167,7 @@ Job titles (chức danh): `viis.job-title.list` (R), `.create` / `.update` / `.d
 | `viis.alarm.rule.list` (`device_id`) | R | Alarm rules of a device. |
 | `viis.alarm.rule.create` / `.update` / `.enable` / `.delete` (D) | W ⚠⚠ | Rewrites the ThingsBoard device profile, shared by every device of that profile. |
 | `viis.schedule.plan.list`, `.plan.get` (`plan_id`), `viis.schedule.running` | R | |
-| `viis.schedule.plan.create` / `.update` / `.delete` (D), `viis.schedule.create` / `.update` / `.delete` (D) | W ⚠⚠ | Every write is pushed to the real gateway at once. `schedule.update` with `enable: 0` stops a running schedule on the device. Unsent fields keep their stored value. |
+| `viis.schedule.plan.create` / `.update` / `.delete` (D), `viis.schedule.create` / `.update` / `.delete` (D) | W ⚠⚠ | Every write is pushed to the real gateway at once. `schedule.update` with `enable: 0` stops a running schedule on the device. Unsent fields keep their stored value. `schedule.plan.delete` also deletes the plan's programs, and is refused while one of them is running. |
 | `viis.greenhouse.list`, `.get` | R | |
 
 ## Admin-only (Root and System users)
