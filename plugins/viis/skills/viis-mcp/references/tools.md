@@ -104,6 +104,20 @@ The chain rules are enforced by the server and shown in the preview:
 `viis.crop.create` / `update` / `delete` (D); `viis.crop.stage.upsert` / `update` / `delete` (D). Crop status: `In progress` or `Done`.
 Pest / disease reports (sâu bệnh): `viis.crop.pest.list` (`crop_id`, R), `.create` (`crop_id`, `label`, optional `state_ids`, `user_ids`), `.update` (`state_ids` / `user_ids`, when sent, replace the links), `.delete` (D).
 
+### Crop detail page (ghi chú, người tham gia, phản hồi, thống kê)
+| Tool | R/W | Notes |
+|---|---|---|
+| `viis.crop.note.list` (`crop_id`) | R | Notes newest first; `name` is the `note_id`. Times are Vietnam wall clock without an offset. |
+| `viis.crop.note.create` (`crop_id`, `label`, `note`) / `.update` (`note_id`) / `.delete` (D) | W | The caller is the author. |
+| `viis.crop.participant.list` (`crop_id`) | R | Employees on the crop (`iot_customer_user`). |
+| `viis.crop.participant.add` / `.remove` (`crop_id`, `user_ids`) (remove D) | W | Add skips employees already on the crop (`skipped`); remove reports ids not on it as `not_linked`. |
+| `viis.ticket.list` (optional `crop_id`, `status`) | R | Tickets of your customer with their `messages`; `name` is the `ticket_id`. Times are Vietnam wall clock. |
+| `viis.ticket.create` (`crop_id`, `label`, `description`, `user_ids`) | W | Starts `Open`. If the result has `warning`, the ticket exists but the employees were not stored: fix with `ticket.update`, do not create it again. |
+| `viis.ticket.update` (`ticket_id`, `status`, `label`, `description`, `user_ids`) | W | Status: `Open`, `In Progress`, `Resolved`, `Closed`, `On Hold`, `Rejected`, `Reopened` (the web shows only the first three). `user_ids`, when sent, replace the employees; otherwise they are kept. Empty status or title is refused. |
+| `viis.ticket.message.create` (`ticket_id`, `content`) | W | Reply as the caller. |
+| `viis.crop.statistics` (`crop_id`, `kind`) | R | `items` (materials used), `participants`, `worksheet`, `production` (output). |
+| `viis.crop.stock-entries` (`crop_id`, `date_from`, `date_to`, `purpose`) | R | Submitted stock entries of the crop, oldest first. `purpose`: `Material Receipt` / `Material Issue` / `Material Transfer`. |
+
 ## QC
 | Tool | Notes |
 |---|---|
@@ -150,7 +164,7 @@ Delivery note (phiếu xuất kho): `customer` from `viis.stock.customer.list`, 
 Each has `create` / `update` / `delete` (D): `viis.item`, `viis.item-group`, `viis.uom`, `viis.plant`, `viis.environment`, `viis.stage-template`, `viis.subculture-position`, `viis.department`, `viis.item-monthly`. They need a caller with a customer. Create always inserts, so check with the matching `.list` that the record doesn't already exist first. `viis.item-monthly.bulk-month` creates or updates one month for many items (web "Tạo tháng").
 
 ## People (nhân sự)
-`viis.employee.create` ⚠ (creates a login account) / `update` (also `position_id`, `is_deactivated`) / `delete` (D); `viis.role.*`; `viis.score.*` (dates `YYYY-MM-DD`); `viis.attendance.*`. Lists: `viis.score.list`, `viis.attendance.list` (rows are employees with `atd[]`; `atd[].name` is the attendance id).
+`viis.employee.create` ⚠ (creates a login account; pass `iot_dynamic_role` from `viis.role.list`) / `update` (also `position_id`, `is_deactivated`) / `delete` (D); `viis.employee.password.set` ⚠ (`employee_id`, `new_password` ≥ 6 chars; System Users only, not your own password; ends that employee's sessions — confirm with the user first, never put the password in your reply); `viis.role.*`; `viis.score.*` (dates `YYYY-MM-DD`); `viis.attendance.*`. Lists: `viis.score.list`, `viis.attendance.list` (rows are employees with `atd[]`; `atd[].name` is the attendance id).
 Job titles (chức danh): `viis.job-title.list` (R), `.create` / `.update` / `.delete` (D) — System Users only, as on the web.
 
 ## Zones and notifications

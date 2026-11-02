@@ -55,6 +55,7 @@ For these, show the preview and get an explicit yes for that exact action, even 
 
 - `viis.schedule.*` writes and `viis.alarm.rule.*` writes: they reach the real gateway or the ThingsBoard device profile immediately. Never create a "test" schedule or rule on a real device.
 - `viis.device.command.send`: sends a ThingsBoard RPC straight to a real device (pump, valve, light). It is fire-and-forget: no acknowledgement, and `method` and `params` aren't validated. Never send one the user didn't ask for by device and action. Never "test" a device command. After sending, say that you cannot confirm the device acted; the user should check telemetry (`viis.device.telemetry.latest`) or the device itself.
+- `viis.employee.password.set`: changes another person's login and signs them out everywhere. Only when the user names the employee and asks for it; never repeat the password in your reply or in a summary.
 - Deletes (`*.delete`, `viis.plan.detail.delete-range`, allocation or assignment deletes). They are marked destructive.
 - Approvals and postings: `viis.qc.*.approve*`, `viis.qc.*.stock-entry`, `viis.qc.subculture.confirm*` / `revoke`, `viis.stock.*.submit` / `cancel` (including delivery notes, xuất kho). These post or reverse stock entries but are **not** marked destructive by the server.
 - `viis.employee.create`: creates a login account.

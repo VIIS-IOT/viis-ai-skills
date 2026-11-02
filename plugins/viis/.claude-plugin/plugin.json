@@ -1,6 +1,6 @@
 {
   "name": "viis",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "VIIS MCP server connection plus the viis-mcp skill for VIIS / VietPlants farm data.",
   "author": {
     "name": "VIIS",
