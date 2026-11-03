@@ -14,7 +14,7 @@ If no `viis` tools are available, the user needs to connect first. See `referenc
 
 ## Tool names
 
-The server names tools with dots (`viis.task.update.status`). Some clients show them with underscores (`viis_task_update_status`). They are the same tools. `references/tools.md` lists every tool by area, with read/write and the key arguments. Read it before using an area for the first time in a conversation.
+The server names tools with dots (`viis.task.update.status`). Some clients show them with underscores (`viis_task_update_status`). They are the same tools. `references/tools.md` lists every tool by area, with read/write and the key arguments. Read it before using an area for the first time in a conversation. Newer servers also serve this knowledge themselves: call `viis.guide` (no topic for the overview, then `topic` = catalogs, production, env-chain, quality, labels, stock, people, reports or rules). If the server's guide and this skill disagree, follow the server.
 
 ## Reading data
 
@@ -57,9 +57,9 @@ For these, show the preview and get an explicit yes for that exact action, even 
 - `viis.device.command.send`: sends a ThingsBoard RPC straight to a real device (pump, valve, light). It is fire-and-forget: no acknowledgement, and `method` and `params` aren't validated. Never send one the user didn't ask for by device and action. Never "test" a device command. After sending, say that you cannot confirm the device acted; the user should check telemetry (`viis.device.telemetry.latest`) or the device itself.
 - `viis.employee.password.set`: changes another person's login and signs them out everywhere. Only when the user names the employee and asks for it; never repeat the password in your reply or in a summary.
 - Deletes (`*.delete`, `viis.plan.detail.delete-range`, allocation or assignment deletes). They are marked destructive.
-- Approvals and postings: `viis.qc.*.approve*`, `viis.qc.*.stock-entry`, `viis.qc.subculture.confirm*` / `revoke`, `viis.stock.*.submit` / `cancel` (including delivery notes, xuất kho). These post or reverse stock entries but are **not** marked destructive by the server.
+- Approvals and postings: `viis.qc.*.approve*`, `viis.qc.*.stock-entry`, `viis.qc.subculture.confirm*`, `viis.stock.*.submit` / `cancel` (including delivery notes, xuất kho). These post stock entries (QC approve with `BacterialSevere` / `Fungal` writes stock off) but are **not** marked destructive by the server. `viis.qc.subculture.revoke` is refused by the server: never promise an undo.
 - `viis.employee.create`: creates a login account.
-- `viis.label.print` / `bulk-print`: they mark labels printed and can trigger physical printing.
+- `viis.label.print` / `bulk-print`: they mark labels printed for everyone (no physical printing happens).
 
 ## Errors
 

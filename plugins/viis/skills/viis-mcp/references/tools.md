@@ -76,7 +76,7 @@ Task types: `EnvStock` (Lô Stock, lô môi trường), `EnvSteamPot` (Hấp, st
 | `viis.env.task.update` | W | Same shape. `task_transfers` links sources; `replace_task_transfers: true` replaces the whole set. |
 | `viis.env.task.delete` | W D | |
 | `viis.initial-sampling.create` / `.update` (`id`) / `.delete` (`name`, D) | W | Initial sampling tasks (lấy mẫu ban đầu). Same task shape as `viis.env.task.*`; the sample check itself is `viis.qc.sample.*`. |
-| `viis.qc.env-pour.approve` | W ⚠ | Approves a pour (→ Verified). It posts stock and is not reversible from MCP. |
+| `viis.qc.env-pour.approve` | W ⚠ | Older pour approval: sets the pour **Done** and issues its materials (Material Issue). It is not the web "Kiểm tra công việc môi trường": that is `viis.qc.subculture.confirm` / `confirm-batch` (→ Verified, outputs posted). Use it only when asked for exactly this. |
 
 The chain rules are enforced by the server and shown in the preview:
 - A steam pot (`EnvSteamPot`) links to an `EnvStock` lot through `task_transfers`.
@@ -123,16 +123,17 @@ Pest / disease reports (sâu bệnh): `viis.crop.pest.list` (`crop_id`, R), `.cr
 |---|---|
 | `viis.qc.wip.list`, `viis.qc.sample.list`, `viis.qc.final.list` (R) | Find `quality_control_id`. Filters: `status` (`Draft`/`Approved`/`Denied`), `task_id`, `assignee_id` (WIP/sample), `date_from`/`date_to` on the task start day. WIP = Kiểm chất lượng (not Passed), sample = Kiểm mẫu (Passed). |
 | `viis.qc.wip.get` (also sample checks), `viis.qc.final.get` (R) | One record. |
-| `viis.qc.subculture.work`, `.confirm`, `.confirm-batch`, `.revoke`, `.stock-entry` | Subculture QC. Confirm, revoke and stock-entry post or reverse stock ⚠. |
-| `viis.qc.wip.submit`, `.approve`, `.approve-batch`, `.delete`, `.stock-entry` | Work-in-progress QC ⚠ on approve and stock-entry. |
+| `viis.qc.subculture.work`, `.confirm`, `.confirm-batch`, `.stock-entry` | Kiểm tra cấy chuyền **and** Kiểm tra công việc môi trường (the web confirm button): confirm sets the task Verified and posts its outputs to stock ⚠. |
+| `viis.qc.subculture.revoke` | Refused by the server once the confirmation posted stock (every current case). Never offer it as an undo. |
+| `viis.qc.wip.submit`, `.approve`, `.approve-batch`, `.delete`, `.stock-entry` | Kiểm tra nhiễm / bán thành phẩm. Approving with `BacterialSevere` or `Fungal` writes the infected quantity off stock (Material Issue) ⚠: say so before the yes. |
 | `viis.qc.final.submit`, `.submit-batch`, `.approve`, `.approve-batch`, `.delete` | Final QC ⚠ on approve. |
-| `viis.qc.sample.approve`, `.delete` | Initial sampling QC. |
-| `viis.qc.env-pour.approve` | See env tasks. |
+| `viis.qc.sample.approve`, `.delete` | Kiểm tra mẫu (after initial sampling). Same write-off rule for `BacterialSevere` / `Fungal`. |
+| `viis.qc.env-pour.approve` | See env tasks: not the web env check. |
 QC times use `YYYY-MM-DD HH:mm:ss`.
 
 ## Labels (in tem)
-`viis.label.list` (`print_status` pending/printed/reprinting, `task_id`, `product_id`) and `viis.label.get` (R) find the request `id`.
-`viis.label.auto-create` (requests for a task), `bulk-create`, `update-quantity`, `report-damage`, `update-printed`, `print` ⚠, `bulk-print` ⚠. Printing marks labels printed and can reach a physical printer.
+`viis.label.list` (`print_status` pending/printed/reprinting, `task_id`, `product_id`, `kind` `env` = tem môi trường / `production` = tem sản xuất) and `viis.label.get` (R) find the request `id`. `viis.label.summary` (R): totals of all labels together (no kind or date split).
+`viis.label.auto-create` (requests for a task), `bulk-create`, `update-quantity`, `report-damage`, `update-printed`, `print` ⚠, `bulk-print` ⚠. Printing only marks labels printed and records the history; nothing is sent to a printer (the user prints from the web print station).
 
 ## Stock (kho)
 | Tool | R/W |
@@ -156,6 +157,7 @@ Delivery note (phiếu xuất kho): `customer` from `viis.stock.customer.list`, 
 | `viis.report.garden-export` (`customer` optional) | Xuất vườn |
 | `viis.report.production-results` (`grouping` week/month/year, ≤ 365 days) | Kết quả sản xuất |
 | `viis.report.production-plan` (`plan_id`, `item_id`, `plant_id`) | Chi tiết kế hoạch sản xuất |
+| `viis.report.environment` (`date_from`, `date_to`, `task_type`, `status`, `assigned_to`; paged) | Báo cáo phòng môi trường |
 | `viis.report.kpi` (`department_id`, `month` YYYY-MM) | KPI tháng (large result) |
 | `viis.dashboard.productivity` (`type` subculture / final-quality-inspection / env-pour, `group_by_time`) | Home productivity cards |
 | `viis.dashboard.personnel` | Home personnel card |
@@ -164,7 +166,7 @@ Delivery note (phiếu xuất kho): `customer` from `viis.stock.customer.list`, 
 Each has `create` / `update` / `delete` (D): `viis.item`, `viis.item-group`, `viis.uom`, `viis.plant`, `viis.environment`, `viis.stage-template`, `viis.subculture-position`, `viis.department`, `viis.item-monthly`. They need a caller with a customer. Create always inserts, so check with the matching `.list` that the record doesn't already exist first. `viis.item-monthly.bulk-month` creates or updates one month for many items (web "Tạo tháng").
 
 ## People (nhân sự)
-`viis.employee.create` ⚠ (creates a login account; pass `iot_dynamic_role` from `viis.role.list`) / `update` (also `position_id`, `is_deactivated`) / `delete` (D); `viis.employee.password.set` ⚠ (`employee_id`, `new_password` ≥ 6 chars; System Users only, not your own password; ends that employee's sessions — confirm with the user first, never put the password in your reply); `viis.role.*`; `viis.score.*` (dates `YYYY-MM-DD`); `viis.attendance.*`. Lists: `viis.score.list`, `viis.attendance.list` (rows are employees with `atd[]`; `atd[].name` is the attendance id).
+`viis.employee.create` ⚠ (creates a login account; pass `iot_dynamic_role` from `viis.role.list`) / `update` (also `position_id`, `is_deactivated`) / `delete` (D); `viis.employee.password.set` ⚠ (`employee_id`, `new_password` ≥ 6 chars; System Users only, not your own password; ends that employee's sessions — confirm with the user first, never put the password in your reply); `viis.role.*` (role `sections` = comma-separated keys from `viis.role.section.list`; `SYSTEM_ADMIN` grants everything); `viis.score.*` (dates `YYYY-MM-DD`); `viis.attendance.*`. Lists: `viis.score.list`, `viis.attendance.list` (rows are employees with `atd[]`; `atd[].name` is the attendance id).
 Job titles (chức danh): `viis.job-title.list` (R), `.create` / `.update` / `.delete` (D) — System Users only, as on the web.
 
 ## Zones and notifications
