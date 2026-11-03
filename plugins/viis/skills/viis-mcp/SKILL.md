@@ -72,6 +72,8 @@ For these, show the preview and get an explicit yes for that exact action, even 
 | Write refused on a read-only connection | The connection was granted only `mcp:read`. | Tell the user. Writes need a connection authorized with write access. |
 | Rate limit | 60 calls/min and 1000/day per connection. | Slow down and batch reads with summary tools. |
 | Tool missing that should exist | The server's tool list changed. Clients cache it, and the server sends no change notice. | Ask the user to reconnect the connector. |
+| "MCP tool is disabled: <name>" | An administrator turned that tool off. Since 2026-11-03 the tools that reach real devices, gateways or printers are off on VietPlants servers: `viis.device.command.send`, `viis.schedule.*` and `viis.schedule.plan.*` writes, `viis.alarm.rule.*` writes, `viis.label.print`, `viis.label.bulk-print`. | Do not retry or look for another tool that does the same. Tell the user to do it in the web app or ask their administrator. |
+| Preview OK, execute fails | The preview checks arguments, ids and your access; some business rules run only on execute (e.g. a stock lot with no output, a QC task outside a lot stage). | Report the server's message to the user; do not change quantities or ids to force it through. |
 
 ## Privacy
 

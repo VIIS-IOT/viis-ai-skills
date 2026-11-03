@@ -72,15 +72,15 @@ Task types: `EnvStock` (Lô Stock, lô môi trường), `EnvSteamPot` (Hấp, st
 
 | Tool | R/W | Notes |
 |---|---|---|
-| `viis.env.task.create` | W | Requires `farming_plan_state` and `task_type`. Materials go in `item_list` and outputs in `prod_quantity_list`, quantities in the active UOM with `active_conversion_factor` (Lít = 1000 × ml). |
+| `viis.env.task.create` | W | Requires `farming_plan_state` and `task_type`; also send `status` (`Plan` for new work), or the task is created with an empty status. Materials go in `item_list` and outputs in `prod_quantity_list`, quantities in the active UOM with `active_conversion_factor` (Lít = 1000 × ml). |
 | `viis.env.task.update` | W | Same shape. `task_transfers` links sources; `replace_task_transfers: true` replaces the whole set. |
 | `viis.env.task.delete` | W D | |
 | `viis.initial-sampling.create` / `.update` (`id`) / `.delete` (`name`, D) | W | Initial sampling tasks (lấy mẫu ban đầu). Same task shape as `viis.env.task.*`; the sample check itself is `viis.qc.sample.*`. |
 | `viis.qc.env-pour.approve` | W ⚠ | Older pour approval: sets the pour **Done** and issues its materials (Material Issue). It is not the web "Kiểm tra công việc môi trường": that is `viis.qc.subculture.confirm` / `confirm-batch` (→ Verified, outputs posted). Use it only when asked for exactly this. |
 
-The chain rules are enforced by the server and shown in the preview:
+Chain rules:
 - A steam pot (`EnvSteamPot`) links to an `EnvStock` lot through `task_transfers`.
-- A pour (`EnvPour`) links to a Done steam pot.
+- A pour (`EnvPour`) links to the steam pot it was poured from. Link only a steam pot that is Done: the server does **not** check this, so read its status with `viis.task.get` first.
 - A pour needs both materials and outputs.
 - At execute time, the server rejects a quantity larger than what is left in the source: "Không đủ số lượng … Còn lại: X, cần dùng: Y". Explain the shortage to the user; don't shrink the quantity on your own.
 - Marking an env task Done stamps `end_date` and `task_progress` (hours). If it is finished before its planned start, `end_date` = the planned start and progress = 0.
@@ -166,7 +166,7 @@ Delivery note (phiếu xuất kho): `customer` from `viis.stock.customer.list`, 
 Each has `create` / `update` / `delete` (D): `viis.item`, `viis.item-group`, `viis.uom`, `viis.plant`, `viis.environment`, `viis.stage-template`, `viis.subculture-position`, `viis.department`, `viis.item-monthly`. They need a caller with a customer. Create always inserts, so check with the matching `.list` that the record doesn't already exist first. `viis.item-monthly.bulk-month` creates or updates one month for many items (web "Tạo tháng").
 
 ## People (nhân sự)
-`viis.employee.create` ⚠ (creates a login account; pass `iot_dynamic_role` from `viis.role.list`) / `update` (also `position_id`, `is_deactivated`) / `delete` (D); `viis.employee.password.set` ⚠ (`employee_id`, `new_password` ≥ 6 chars; System Users only, not your own password; ends that employee's sessions — confirm with the user first, never put the password in your reply); `viis.role.*` (role `sections` = comma-separated keys from `viis.role.section.list`; `SYSTEM_ADMIN` grants everything); `viis.score.*` (dates `YYYY-MM-DD`); `viis.attendance.*`. Lists: `viis.score.list`, `viis.attendance.list` (rows are employees with `atd[]`; `atd[].name` is the attendance id).
+`viis.employee.create` ⚠ (creates a login account; pass `iot_dynamic_role` from `viis.role.list`; returns `{ employee_id, email, created }`) / `update` (also `position_id`, `is_deactivated`) / `delete` (D); `viis.employee.password.set` ⚠ (`employee_id`, `new_password` ≥ 6 chars; System Users only, not your own password; ends that employee's sessions — confirm with the user first, never put the password in your reply); `viis.role.*` (role `sections` = comma-separated keys from `viis.role.section.list`; `SYSTEM_ADMIN` grants everything); `viis.score.*` (dates `YYYY-MM-DD`); `viis.attendance.*`. Lists: `viis.score.list`, `viis.attendance.list` (rows are employees with `atd[]`; `atd[].name` is the attendance id).
 Job titles (chức danh): `viis.job-title.list` (R), `.create` / `.update` / `.delete` (D) — System Users only, as on the web.
 
 ## Zones and notifications
