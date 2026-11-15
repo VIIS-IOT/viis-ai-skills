@@ -60,6 +60,7 @@ The newer list tools take `page` and `limit` (default 50, max 200) and return `t
 | `viis.task.update` | W | Edit fields. |
 | `viis.task.update.status` | W | The only right way to change a status. It runs the web status-menu logic. `Verified` can't be set. |
 | `viis.task.assign` | W | The web "Phân bổ công việc" table: one row per user per day; `template_id`, `department_id`, ISO dates with `+07:00`. Assignees get a push notification. |
+| `viis.task.import` | W | "Import lịch làm việc": many tasks at once from a work schedule (a spreadsheet or table the user gives you). `rows` use **names**, not ids: `crop` (lô), `stage`, `template`, `department`, `employee`, `date` (`YYYY-MM-DD`), `quantity`; optional `description`, `involved_user`, `create_existing`; `row_number` is any unique integer you can point the user to. Without confirm it creates nothing and returns `check.summary` + `check.rows[]` with `status` `ready` / `exists` / `duplicate_in_file` / `error`, `messages`, `suggestions` (for mistyped names) and `plan_label` (the production plan a subculture task counts against). With `confirm: true` it creates the ready rows; error rows create nothing and do not block the others; rows that already exist are skipped. Max 500 rows per call. |
 | `viis.task.delete` | W D | Not allowed for Done or Verified tasks. |
 | `viis.task.material.save` / `.delete` | W (D) | Materials (vật tư) of a task: one row per item; an item already on the task is updated. Quantities in the row's `uom` (default the stock UOM); stored in the stock UOM. Refused on Verified tasks. |
 | `viis.task.output.save` / `.delete` | W (D) | Outputs (sản lượng), same rules. For EnvPour tasks exp/draft > 0 auto-creates label requests, as on the web. Does not post stock. |
@@ -196,6 +197,13 @@ Job titles (chức danh): `viis.job-title.list` (R), `.create` / `.update` / `.d
 2. Optionally `viis.plan.list` → the production plan covering that day (`production_plan_id`).
 3. `viis.task.assign` without confirm: `crop_id` + `state_id`, `department_id`, one row with X, `2026-10-22T07:00:00+07:00` → `2026-10-22T17:00:00+07:00`, `template_id`, `exp_quantity` in the template's unit (Lít), `task_type: EnvStock`.
 4. Show the preview, get a yes, then repeat with `confirm: true`. X gets "Bạn vừa được giao công việc …" on the app. Env stock tasks don't count against the plan's yield allocation.
+
+**"Import lịch làm việc từ file này" / "phân công theo bảng này"**
+1. Read the user's file or table yourself and turn it into rows: one row = one task for one person on one day. Copy names exactly as written; never invent or "correct" a name on your own. Dates become `YYYY-MM-DD` (Vietnamese files are day-first: `20/11/2026` → `2026-11-20`). If a column is missing (for example no department), ask the user or look the value up (`viis.employee.list`, `viis.department.list`, `viis.task.template.list`, `viis.stage-template.list`, `viis.crop.overview`) and tell the user what you filled in.
+2. `viis.task.import` without confirm. Report `check.summary` in one line ("12 sẽ tạo, 2 đã có nên bỏ qua, 1 lỗi") and list every `error` row with its reason. For a row with `suggestions`, ask "Ý bạn là …?" and only use the suggested name after a yes.
+3. Fix what the user confirms, preview again, and when they agree repeat with `confirm: true`. Report `result.summary` and any `failed` row with its reason.
+4. Rules the server applies (same as manual assignment): the template must belong to the stage and be a kind of work of the department (cấy chuyền → Subculture; tăng trưởng → QC / xuất cấy; môi trường → Lô Stock / Hấp / Chiết rót); the lot must have that stage; a subculture task needs a production plan with that product on that day; every task is one day, 07:00–17:00.
+5. An identical task (same lot, stage, template, employee and day) is never created twice: it comes back as `exists` or `skipped`. Set `create_existing: true` on a row only when the user explicitly asks for a second identical task. Sending the same rows again is safe.
 
 **"Hôm nay ai có việc gì?"**
 `viis.task.list` with `date_from` = today (Vietnam date) and `limit: 100`. Group by `assigned_name`. If `tasks` hits the limit, say so and use `status_counts` for totals.
